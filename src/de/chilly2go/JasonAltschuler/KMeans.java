@@ -9,6 +9,10 @@ package de.chilly2go.JasonAltschuler;
  * Algorithm: KMeans++. An improved version of K-Means clustering algorithm.
  *
  * For full documentation, see readme.txt
+ * @author chilly2go
+ * -added option to predefine a (the first) centroid
+ * -added option to determine a datapoints nearest centroid
+ * (my use case has 1d datapoints. the additions do not cover anything more)
  *************************************************************************/
 
 
