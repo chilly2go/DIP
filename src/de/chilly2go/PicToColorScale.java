@@ -18,6 +18,7 @@ public class PicToColorScale implements Callable<DIPreturn>
   public static final boolean DRAW_HEAT_SOURCE_RECTANGLE           = true;
   public static final int     DRAW_HEAT_SOURCE_RECTANGLE_SIZE      = 22;
   public static final int     DRAW_HEAT_SOURCE_MAX_DEVIATION       = 500;
+  public static final int     DRAW_HEAT_SOURCE_MIN_PIXELS          = 3;
   public static final boolean WRITE_DEBUG_PIXEL_VALUES             = false;
   public static final boolean WRITE_JPG                            = false;
   public static final int     MIN_DIFFERENCE_TO_SELECT_HEAT_SOURCE = 2500;
@@ -226,37 +227,27 @@ public class PicToColorScale implements Callable<DIPreturn>
           if (DRAW_HEAT_SOURCE_RECTANGLE && max - min > MIN_DIFFERENCE_TO_SELECT_HEAT_SOURCE &&
               !rectangleCoordsEstimated)
           {
+            // pixel is max or close to it
             if (tmp >= max - 10)
             {
-              // check above
-              if (y > 0)
+              int requiredNeighboringHeatPixels = (DRAW_HEAT_SOURCE_MIN_PIXELS - 1);
+              // get topLeft corner (distance accoding to required heat pixels
+              int heatAreaFromTop               = y - requiredNeighboringHeatPixels;
+              int heatAreaFromLeft              = x - requiredNeighboringHeatPixels;
+              // iterate over all pixels for the square surrounding the maxTemp pixel.
+              for (int heatY = heatAreaFromTop; heatY < y + requiredNeighboringHeatPixels; heatY++)
               {
-                // top left
-                if (x > 0 && checkNeighborForSimilarValue(raster, x - 1, y - 1, max))
-                { countHotPixels++; }
-                // top
-                if (checkNeighborForSimilarValue(raster, x, y - 1, max))
-                { countHotPixels++; }
-                // top right
-                if (x + 1 < width && checkNeighborForSimilarValue(raster, x + 1, y - 1, max))
-                { countHotPixels++; }
+                for (int heatX = heatAreaFromLeft; heatX < x + requiredNeighboringHeatPixels; heatX++)
+                {
+                  // check bounds
+                  if (heatX > 0 && heatY > 0 && heatX < width && heatY < height)
+                  {
+                    if (checkNeighborForSimilarValue(raster, heatX, heatY, max))
+                    { countHotPixels++; }
+                  }
+                }
               }
-              // check same line
-              // left
-              if (x > 0 && checkNeighborForSimilarValue(raster, x - 1, y, max)) countHotPixels++;
-              // right
-              if (x + 1 < width && checkNeighborForSimilarValue(raster, x - 1, y, max)) countHotPixels++;
-              // check below
-              if (y + 1 < height)
-              {
-                //bottom left
-                if (x > 0 && checkNeighborForSimilarValue(raster, x - 1, y + 1, max)) countHotPixels++;
-                //bottom
-                if (checkNeighborForSimilarValue(raster, x, y + 1, max)) countHotPixels++;
-                //bottom right
-                if (x + 1 < width && checkNeighborForSimilarValue(raster, x + 1, y + 1, max)) countHotPixels++;
-              }
-              if (countHotPixels >= 2)
+              if (countHotPixels >= requiredNeighboringHeatPixels)
               {
                 // at least 2 other pixels in same range found. proper "heat source"
                 rectCenter[0] = y;
@@ -264,7 +255,9 @@ public class PicToColorScale implements Callable<DIPreturn>
                 rectangleCoordsEstimated = true;
               }
               else
-              { }
+              {
+                // currently doing nothing it not enough pixels could be found.
+              }
               diPreturn.countHotPixels(countHotPixels);
             }
           }
