@@ -6,14 +6,12 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.concurrent.Callable;
 
 public class PicToColorScale implements Callable<DIPreturn>
 {
-  public static final boolean CLUSTER_COLORS                       = true;
+  public static       boolean CLUSTER_COLORS                       = true;
   public static       int     CLUSTER_COLORS_COUNT                 = 7;
   public static final boolean DRAW_HEAT_SOURCE_RECTANGLE           = true;
   public static final int     DRAW_HEAT_SOURCE_RECTANGLE_SIZE      = 22;
@@ -34,6 +32,7 @@ public class PicToColorScale implements Callable<DIPreturn>
   {
     this.file = file;
     CLUSTER_COLORS_COUNT = clusters;
+    CLUSTER_COLORS = clusters != 0;
   }
   
   public int hsvToRgb(float H, float S, float V)
@@ -148,7 +147,7 @@ public class PicToColorScale implements Callable<DIPreturn>
     int       min            = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
     int       countHotPixels = 0;
     double    elapsed        = 0;
-    KMeans    clustering;
+    KMeans    clustering     = null;
     DIPreturn diPreturn      = new DIPreturn(min, max, file);
     try
     {
@@ -232,8 +231,8 @@ public class PicToColorScale implements Callable<DIPreturn>
             {
               int requiredNeighboringHeatPixels = (DRAW_HEAT_SOURCE_MIN_PIXELS - 1);
               // get topLeft corner (distance accoding to required heat pixels
-              int heatAreaFromTop               = y - requiredNeighboringHeatPixels;
-              int heatAreaFromLeft              = x - requiredNeighboringHeatPixels;
+              int heatAreaFromTop  = y - requiredNeighboringHeatPixels;
+              int heatAreaFromLeft = x - requiredNeighboringHeatPixels;
               // iterate over all pixels for the square surrounding the maxTemp pixel.
               for (int heatY = heatAreaFromTop; heatY < y + requiredNeighboringHeatPixels; heatY++)
               {
@@ -305,9 +304,12 @@ public class PicToColorScale implements Callable<DIPreturn>
         }
       }
       String filename = file.getPath().substring(0, file.getPath().length() - 5);
-      ImageIO.write(bufferedImage, "png",
-                    new File(
-                        filename + "_Output_min" + min + "_max" + max + "_clusters" + CLUSTER_COLORS_COUNT + ".png"));
+      File outputFile = new File(
+          filename + "_Output_min" + min + "_max" + max + "_clusters" + CLUSTER_COLORS_COUNT + ".png");
+      if (outputFile.exists())
+      { outputFile.delete(); }
+      Thread.sleep(100);
+      ImageIO.write(bufferedImage, "png", outputFile.getAbsoluteFile());
       if (WRITE_JPG)
       {
         ImageIO.write(bufferedImage,
@@ -319,6 +321,9 @@ public class PicToColorScale implements Callable<DIPreturn>
     {
       System.err.println("inputfile: " + file.getPath());
       // not proper... but works for now
+      e.printStackTrace();
+    } catch (InterruptedException e)
+    {
       e.printStackTrace();
     }
     return diPreturn;
@@ -363,7 +368,7 @@ public class PicToColorScale implements Callable<DIPreturn>
         "(Clustering: " +
         dipreturn.elapsedClustering() + " seconds)| Min: " + dipreturn.min() + " Max: " + dipreturn.max() +
         " | Heat source found / confirmed: " + dipreturn.heatRegionFound() + " (" + dipreturn.countHotPixels() + ") |" +
-        " Clusters: " + CLUSTER_COLORS_COUNT);
+        " Clusters: " + (CLUSTER_COLORS ? CLUSTER_COLORS_COUNT : "off"));
     return dipreturn;
   }
 }

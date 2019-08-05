@@ -13,7 +13,7 @@ public class Main_Folders
   
   public static void main(String[] args)
   {
-    int[] clusters = new int[]{2, 3, 4, 5, 7, 10, 15, 20};
+    int[]      clusters  = new int[]{0, 2, 3, 4, 5, 7, 10, 15, 20};
     final long startTime = System.currentTimeMillis();
     for (int cluster : clusters
     )
@@ -22,10 +22,10 @@ public class Main_Folders
       LinkedBlockingQueue<Future<DIPreturn>> queue = new LinkedBlockingQueue<Future<DIPreturn>>();
       String path =
           "H:\\Dropbox\\uni_master\\Thesis\\Recherche\\images\\test_distanz\\5\\";
-      String extension              = "tiff";
+      String extension = "tiff";
       try
       {
-        ThreadPoolExecutor ex = (ThreadPoolExecutor) Executors.newFixedThreadPool(6);
+        ThreadPoolExecutor ex = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
         // start picture jobs
         final long startTimeJob = System.currentTimeMillis();
         
@@ -37,11 +37,12 @@ public class Main_Folders
             {
               if (file.isFile() && file.getName().endsWith(extension))
               {
-                if (true )
+                if (true)
                 { queue.add(ex.submit(new PicToColorScale(file, cluster))); }
               }
             }
           }
+          Thread.sleep(500);
         }
         // check for finished jobs
         while (!queue.isEmpty())
@@ -71,6 +72,6 @@ public class Main_Folders
     }
     final long endTime = System.currentTimeMillis();
     System.out.println("Gesamtzeit: " + (double) ((long) endTime - startTime) / 1000 + " Sekunden");
-  
+    
   }
 }
