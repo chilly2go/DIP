@@ -7,12 +7,13 @@ import java.io.File;
  */
 public class DIPreturn
 {
-  private int    min;
-  private int    max;
-  private int    countHotPixels = -1;
-  private double elapsedClustering;
-  private double elapsedTotal;
-  private File   file;
+  private int     min;
+  private int     max;
+  private int     countHotPixels  = -1;
+  private boolean heatRegionFound = false;
+  private double  elapsedClustering;
+  private double  elapsedTotal;
+  private File    file;
   
   public DIPreturn(int min, int max, File file)
   {
@@ -104,8 +105,14 @@ public class DIPreturn
     return this;
   }
   
+  public DIPreturn heatRegionFound(boolean heatRegionFound)
+  {
+    this.heatRegionFound = heatRegionFound;
+    return this;
+  }
+  
   public boolean heatRegionFound()
   {
-    return this.countHotPixels >= 2;
+    return this.heatRegionFound;
   }
 }

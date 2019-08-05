@@ -238,8 +238,8 @@ public class PicToColorScale implements Callable<DIPreturn>
               {
                 for (int heatX = heatAreaFromLeft; heatX < x + requiredNeighboringHeatPixels; heatX++)
                 {
-                  // check bounds
-                  if (heatX > 0 && heatY > 0 && heatX < width && heatY < height)
+                  // check bounds and ensure that the max-pixel is not checked
+                  if (heatX > 0 && heatY > 0 && heatX < width && heatY < height && !(heatX == x && heatY == y))
                   {
                     if (checkNeighborForSimilarValue(raster, heatX, heatY, max))
                     { countHotPixels++; }
@@ -257,7 +257,7 @@ public class PicToColorScale implements Callable<DIPreturn>
               {
                 // currently doing nothing it not enough pixels could be found.
               }
-              diPreturn.countHotPixels(countHotPixels);
+              diPreturn.countHotPixels(countHotPixels).heatRegionFound(rectangleCoordsEstimated);
             }
           }
           if (CLUSTER_COLORS)
@@ -273,8 +273,8 @@ public class PicToColorScale implements Callable<DIPreturn>
       }
       if (DRAW_HEAT_SOURCE_RECTANGLE && rectangleCoordsEstimated)
       {
-        int fromTop  = rectCenter[0] - (int) Math.ceil(DRAW_HEAT_SOURCE_RECTANGLE_SIZE / 2);
-        int fromLeft = rectCenter[1] - (int) Math.ceil(DRAW_HEAT_SOURCE_RECTANGLE_SIZE / 2);
+        int fromTop  = rectCenter[0] - (int) Math.floor(DRAW_HEAT_SOURCE_RECTANGLE_SIZE / 2);
+        int fromLeft = rectCenter[1] - (int) Math.floor(DRAW_HEAT_SOURCE_RECTANGLE_SIZE / 2);
         int y;
         int x;
         /* draw rectangle for heat source */
@@ -306,6 +306,7 @@ public class PicToColorScale implements Callable<DIPreturn>
       String filename = file.getPath().substring(0, file.getPath().length() - 5);
       File outputFile = new File(
           filename + "_Output_min" + min + "_max" + max + "_clusters" + CLUSTER_COLORS_COUNT + ".png");
+      // reduces execptions with access violation (deleting + short sleep)
       if (outputFile.exists())
       { outputFile.delete(); }
       Thread.sleep(100);
