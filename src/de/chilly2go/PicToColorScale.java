@@ -11,31 +11,31 @@ import java.util.concurrent.Callable;
 
 public class PicToColorScale implements Callable<DIPreturn>
 {
-  public static       boolean CLUSTER_COLORS                       = true;
-  public static       int     CLUSTER_COLORS_COUNT                 = 7;
-  public static final boolean DRAW_HEAT_SOURCE_RECTANGLE           = true;
-  public static final int     DRAW_HEAT_SOURCE_RECTANGLE_SIZE      = 22;
-  public static final int     DRAW_HEAT_SOURCE_MAX_DEVIATION       = 500;
-  public static final int     DRAW_HEAT_SOURCE_MIN_PIXELS          = 3;
-  public static final boolean WRITE_DEBUG_PIXEL_VALUES             = false;
-  public static final boolean WRITE_JPG                            = false;
-  public static final int     MIN_DIFFERENCE_TO_SELECT_HEAT_SOURCE = 2500;
-  public static final int     MIN_ADJUST_BY                        = -200;
-  private             File    file;
+  private static       boolean CLUSTER_COLORS                       = true;
+  private static       int     CLUSTER_COLORS_COUNT                 = 7;
+  private static final boolean DRAW_HEAT_SOURCE_RECTANGLE           = true;
+  private static final int     DRAW_HEAT_SOURCE_RECTANGLE_SIZE      = 22;
+  private static final int     DRAW_HEAT_SOURCE_MAX_DEVIATION       = 500;
+  private static final int     DRAW_HEAT_SOURCE_MIN_PIXELS          = 3;
+  private static final boolean WRITE_DEBUG_PIXEL_VALUES             = false;
+  private static final boolean WRITE_JPG                            = false;
+  private static final int     MIN_DIFFERENCE_TO_SELECT_HEAT_SOURCE = 2500;
+  private static final int     MIN_ADJUST_BY                        = -200;
+  private              File    file;
   
   public PicToColorScale(File file)
   {
     this.file = file;
   }
   
-  public PicToColorScale(File file, int clusters)
+  PicToColorScale(File file, int clusters)
   {
     this.file = file;
     CLUSTER_COLORS_COUNT = clusters;
     CLUSTER_COLORS = clusters != 0;
   }
   
-  public int hsvToRgb(float H, float S, float V)
+  private int hsvToRgb(float H, float S, float V)
   {
     
     float R, G, B;
@@ -143,7 +143,7 @@ public class PicToColorScale implements Callable<DIPreturn>
   
   private DIPreturn picuteToColorScale(File file)
   {
-    int       width, height  = 0;
+    int       width, height;
     int       min            = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
     int       countHotPixels = 0;
     double    elapsed        = 0;
@@ -213,7 +213,7 @@ public class PicToColorScale implements Callable<DIPreturn>
                 .predefineCentroidWith(max)
                 .build();
         final long endTime = System.currentTimeMillis();
-        elapsed = (double) ((long) endTime - startTime) / 1000;
+        elapsed = (double) (endTime - startTime) / 1000;
       }
       diPreturn.min(min).max(max).elapsedClustering(elapsed);
       BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -252,10 +252,6 @@ public class PicToColorScale implements Callable<DIPreturn>
                 rectCenter[0] = y;
                 rectCenter[1] = x;
                 rectangleCoordsEstimated = true;
-              }
-              else
-              {
-                // currently doing nothing it not enough pixels could be found.
               }
               diPreturn.countHotPixels(countHotPixels).heatRegionFound(rectangleCoordsEstimated);
             }
@@ -308,7 +304,7 @@ public class PicToColorScale implements Callable<DIPreturn>
           filename + "_Output_min" + min + "_max" + max + "_clusters" + CLUSTER_COLORS_COUNT + ".png");
       // reduces execptions with access violation (deleting + short sleep)
       if (outputFile.exists())
-      { outputFile.delete(); }
+      { outputFile.delete() }
       Thread.sleep(100);
       ImageIO.write(bufferedImage, "png", outputFile.getAbsoluteFile());
       if (WRITE_JPG)
