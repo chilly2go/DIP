@@ -13,6 +13,7 @@ public class Main_Folders
   
   public static void main(String[] args)
   {
+    // define clusters (color count for color reduktion). 0 = clustering off
     int[]      clusters  = new int[]{0, 2, 3, 4, 5, 7, 10, 15, 20};
     final long startTime = System.currentTimeMillis();
     for (int cluster : clusters
@@ -25,6 +26,8 @@ public class Main_Folders
       String extension = "tiff";
       try
       {
+        // hard coded threadpool size. could be changed to systemcores / 2 (with multithreading it is faster to use
+        // only physical cores. improves performance by ~34%
         ThreadPoolExecutor ex = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
         // start picture jobs
         final long startTimeJob = System.currentTimeMillis();
