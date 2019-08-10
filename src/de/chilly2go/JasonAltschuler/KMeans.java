@@ -504,7 +504,13 @@ public class KMeans
         {
           // TODO: review and try to optimize
           // starts at the largest bin. EDIT: not actually the largest
-          if (rand > weightedDistribution[j - 1] / weightedDistribution[m - 1])
+          /*
+           according to http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf the probability is calculated by dividing
+           the distance of the currently checked datapoint by the sum of all distances (squared. but using L2 Distance
+           function without getting the actual square root gets you the correct result).
+           so this should be wrong. but the images created using this provide results that are easier to view.
+           */
+          if (rand > (weightedDistribution[j - 1] / weightedDistribution[m - 1]))
           {
             choose = j; // one bigger than the one above
             break;
