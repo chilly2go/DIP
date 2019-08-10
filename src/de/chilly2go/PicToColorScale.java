@@ -7,6 +7,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.io.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 public class PicToColorScale implements Callable<DIPreturn>
@@ -18,7 +21,7 @@ public class PicToColorScale implements Callable<DIPreturn>
   private static final int     DRAW_HEAT_SOURCE_MAX_DEVIATION       = 500;
   private static final int     DRAW_HEAT_SOURCE_MIN_PIXELS          = 3;
   private static final boolean WRITE_DEBUG_PIXEL_VALUES             = false;
-  private static final boolean WRITE_JPG                            = false;
+  private static final boolean WRITE_JPG                            = true;
   private static final int     MIN_DIFFERENCE_TO_SELECT_HEAT_SOURCE = 2500;
   private static final int     MIN_ADJUST_BY                        = -200;
   private              File    file;
@@ -156,11 +159,12 @@ public class PicToColorScale implements Callable<DIPreturn>
       BufferedImage image = ImageIO.read(file);
       width = image.getWidth();
       height = image.getHeight();
-      Raster     raster                   = image.getData();
-      double[][] points                   = new double[width * height][1];
-      int        p                        = 0;
-      int[]      rectCenter               = new int[2];
-      boolean    rectangleCoordsEstimated = false;
+      Raster                    raster                   = image.getData();
+      double[][]                points                   = new double[width * height][1];
+      int                       p                        = 0;
+      int[]                     rectCenter               = new int[2];
+      boolean                   rectangleCoordsEstimated = false;
+      HashMap<Integer, Integer> valueFrequencies         = new HashMap<>();
       if (WRITE_DEBUG_PIXEL_VALUES)
       {
         writer1 = new PrintWriter(new File("color-hex.csv"));
@@ -188,6 +192,17 @@ public class PicToColorScale implements Callable<DIPreturn>
           {
             linewriter2.append(tmp);
             linewriter2.append(",");
+          }
+          if (!CLUSTER_COLORS)
+          {
+            if (valueFrequencies.containsKey(tmp))
+            {
+              valueFrequencies.put(tmp, valueFrequencies.get(tmp) + 1);
+            }
+            else
+            {
+              valueFrequencies.put(tmp, 1);
+            }
           }
         }
         if (WRITE_DEBUG_PIXEL_VALUES)
@@ -304,9 +319,26 @@ public class PicToColorScale implements Callable<DIPreturn>
           filename + "_Output_min" + min + "_max" + max + "_clusters" + CLUSTER_COLORS_COUNT + ".png");
       // reduces execptions with access violation (deleting + short sleep)
       if (outputFile.exists())
-      { outputFile.delete() }
+      { outputFile.delete(); }
       Thread.sleep(100);
       ImageIO.write(bufferedImage, "png", outputFile.getAbsoluteFile());
+      // get thermal value distribution as csv file
+      if (!CLUSTER_COLORS)
+      {
+        Iterator<Entry<Integer, Integer>> iterator  = valueFrequencies.entrySet().iterator();
+        StringBuilder                     header    = new StringBuilder();
+        StringBuilder                     frequency = new StringBuilder();
+        while (iterator.hasNext())
+        {
+          Entry<Integer, Integer> entry = iterator.next();
+          header.append(entry.getKey()).append(',');
+          frequency.append(entry.getValue()).append(',');
+        }
+        PrintWriter frequencyWriter = new PrintWriter(new File(filename + ".frequency.txt"));
+        frequencyWriter.println(header.toString());
+        frequencyWriter.println(frequency.toString());
+        frequencyWriter.close();
+      }
       if (WRITE_JPG)
       {
         ImageIO.write(bufferedImage,
