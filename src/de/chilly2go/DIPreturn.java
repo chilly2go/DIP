@@ -4,6 +4,7 @@ import java.io.File;
 
 /**
  * Return Object to DIP job (color transform and stuff)
+ * Gathers info and allows method-chaining while doing so.
  */
 public class DIPreturn
 {

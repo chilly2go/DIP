@@ -10,7 +10,12 @@ import java.util.concurrent.*;
  */
 public class Main_Folders
 {
-  
+  /**
+   * Run image processing for all subfolders with a configuration from <i>clusters</i> each. Processing is only done
+   * for images with <i>extension</i> (currently tiff). There will be a line with some information for each image and
+   * a summary for time taken per job and a total time taken.
+   * @param args
+   */
   public static void main(String[] args)
   {
     // define clusters (color count for color reduktion). 0 = clustering off
@@ -63,7 +68,7 @@ public class Main_Folders
           }
         }
         final long endTimeJob = System.currentTimeMillis();
-        System.out.println("Job-Zeit: " + (double) ((long) endTimeJob - startTimeJob) / 1000 + " Sekunden");
+        System.out.println("Job-Zeit: " + (double) (endTimeJob - startTimeJob) / 1000 + " Sekunden");
         ex.shutdown();
         // everything is done. there should not be anything blocking here
         ex.awaitTermination(30, TimeUnit.SECONDS);
@@ -74,7 +79,7 @@ public class Main_Folders
       }
     }
     final long endTime = System.currentTimeMillis();
-    System.out.println("Gesamtzeit: " + (double) ((long) endTime - startTime) / 1000 + " Sekunden");
+    System.out.println("Gesamtzeit: " + (double) (endTime - startTime) / 1000 + " Sekunden");
     
   }
 }

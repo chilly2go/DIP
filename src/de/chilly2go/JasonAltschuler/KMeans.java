@@ -12,7 +12,7 @@ package de.chilly2go.JasonAltschuler;
  * @author chilly2go
  * -added option to predefine a (the first) centroid
  * -added option to determine a datapoints nearest centroid
- * (my use case has 1d datapoints. the additions do not cover anything more)
+ * (my use case has 1d datapoints. the additions do not cover anything more = not multi-dimensional like the rest)
  *************************************************************************/
 
 

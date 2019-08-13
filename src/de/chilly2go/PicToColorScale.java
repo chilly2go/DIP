@@ -12,6 +12,24 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
+/**
+ * Do some image processing. Various constants to influence the work. If colors should be reduced <i>CLUSTER_COLORS</i>
+ * has to be true and <i>CLUSTER_COLORS_COUNT</i> must be bigger than 0. By creating a new instance with
+ * <i>clusters</i>
+ * != 0 those constants will be set appropriately.
+ * <i>Clusters</i> == 0 will result in no color reduction.
+ * <p>
+ * Constants:
+ * DRAW_HEAT_SOURCE_RECTANGLE - Should there be a search for a heatsource?
+ * DRAW_HEAT_SOURCE_RECTANGLE_SIZE - How big should the rectangle be drawn?
+ * DRAW_HEAT_SOURCE_MAX_DEVIATION - max-value minus this constant is the value a pixel has to have (or bigger) to be
+ * counted
+ * DRAW_HEAT_SOURCE_MIN_PIXELS - amount of pixels required to "confirm" the heatsource
+ * WRITE_DEBUG_PIXEL_VALUES - write help files with pixel values as matrix WRITE_JPG - also generate JPG file?
+ * MIN_DIFFERENCE_TO_SELECT_HEAT_SOURCE - if (max-min)< this constant = not enough difference to expect a heat source
+ * MIN_ADJUST_BY - add this amount to calculated min-value. ending up with a smaller number will move the color
+ * scale to lighter colors for low values
+ */
 public class PicToColorScale implements Callable<DIPreturn>
 {
   private static       boolean CLUSTER_COLORS                       = true;
@@ -38,6 +56,18 @@ public class PicToColorScale implements Callable<DIPreturn>
     CLUSTER_COLORS = clusters != 0;
   }
   
+  /**
+   * Get Integer RGB value from H, S and V
+   *
+   * @param H
+   *     Hue
+   * @param S
+   *     Saturation
+   * @param V
+   *     Value
+   *
+   * @return Integer RGB value
+   */
   private int hsvToRgb(float H, float S, float V)
   {
     
@@ -144,6 +174,14 @@ public class PicToColorScale implements Callable<DIPreturn>
     return raster.getSample(x, y, 0) > (max - DRAW_HEAT_SOURCE_MAX_DEVIATION);
   }
   
+  /**
+   * do the actual image processing
+   *
+   * @param file
+   *     file to process
+   *
+   * @return
+   */
   private DIPreturn picuteToColorScale(File file)
   {
     int       width, height;
@@ -154,22 +192,31 @@ public class PicToColorScale implements Callable<DIPreturn>
     DIPreturn diPreturn      = new DIPreturn(min, max, file);
     try
     {
+      // adjust minimum hardcoded?
       //      min = 7000;
-      PrintWriter   writer1, writer2;
+      PrintWriter writer1, writer2;
+      // read source file
       BufferedImage image = ImageIO.read(file);
+      // get dimensions
       width = image.getWidth();
       height = image.getHeight();
-      Raster                    raster                   = image.getData();
-      double[][]                points                   = new double[width * height][1];
-      int                       p                        = 0;
-      int[]                     rectCenter               = new int[2];
-      boolean                   rectangleCoordsEstimated = false;
-      HashMap<Integer, Integer> valueFrequencies         = new HashMap<>();
+      Raster raster = image.getData(); // get a reference to the image data
+      double[][] points =
+          new double[width * height][1]; // make an array of points to be used with kmeans
+      int                       p                        = 0; //point counter
+      int[]                     rectCenter               = new int[2]; // heat source center
+      boolean                   rectangleCoordsEstimated = false; // was a heat source found?
+      HashMap<Integer, Integer> valueFrequencies         = new HashMap<>(); // get frequencies of values
       if (WRITE_DEBUG_PIXEL_VALUES)
       {
+        //        write pixel value as int / hex?
         writer1 = new PrintWriter(new File("color-hex.csv"));
         writer2 = new PrintWriter(new File("color-value.csv"));
       }
+      // inside this loop:
+      // calculate min / max values for the source image
+      // gather value frequencies (only if not clustering. don't have to do that every time)
+      // gather points for kmeans
       for (int i = 0; i < height; i++)
       {
         StringBuilder linewriter  = new StringBuilder();
@@ -213,8 +260,10 @@ public class PicToColorScale implements Callable<DIPreturn>
           writer2.write(linewriter2.toString());
         }
       }
+      // adjust calculated (or hardcoded) min value?
       if (MIN_ADJUST_BY != 0)
       { min += MIN_ADJUST_BY; }
+      // cluster colors? measure time taken
       if (CLUSTER_COLORS)
       {
         final long startTime = System.currentTimeMillis();
@@ -230,14 +279,19 @@ public class PicToColorScale implements Callable<DIPreturn>
         final long endTime = System.currentTimeMillis();
         elapsed = (double) (endTime - startTime) / 1000;
       }
+      // gather some information as return value
       diPreturn.min(min).max(max).elapsedClustering(elapsed);
+      // create a new image:
+      // * search for a heat source
+      // * replace current pixel value with cluster value (if we reduce colors)
+      // * write source pixel values as color coded pixels
       BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
       for (int y = 0; y < height; y++)
       {
         for (int x = 0; x < width; x++)
         {
           double tmp = raster.getSample(x, y, 0);
-          // draw info rectangle?
+          // draw info rectangle? (a.k.a. search for heatsource
           if (DRAW_HEAT_SOURCE_RECTANGLE && max - min > MIN_DIFFERENCE_TO_SELECT_HEAT_SOURCE &&
               !rectangleCoordsEstimated)
           {
@@ -268,22 +322,27 @@ public class PicToColorScale implements Callable<DIPreturn>
                 rectCenter[1] = x;
                 rectangleCoordsEstimated = true;
               }
+              // more info for the return object
               diPreturn.countHotPixels(countHotPixels).heatRegionFound(rectangleCoordsEstimated);
             }
           }
           if (CLUSTER_COLORS)
           {
+            // clustering colors. adjust current pixels value
             tmp = clustering.assignFromCentroid(tmp);
           }
           // convert to new color
           float hue = (float) (javafx.scene.paint.Color.BLUE.getHue() +
                                (javafx.scene.paint.Color.RED.getHue() - javafx.scene.paint.Color.BLUE.getHue()) *
                                (tmp - min) / (max - min));
+          // write to new image
           bufferedImage.setRGB(x, y, this.hsvToRgb(hue, 100, 100));
         }
       }
+      // found a heat source and want to draw the rectangle? look here
       if (DRAW_HEAT_SOURCE_RECTANGLE && rectangleCoordsEstimated)
       {
+        // get start position
         int fromTop  = rectCenter[0] - (int) Math.floor(DRAW_HEAT_SOURCE_RECTANGLE_SIZE / 2);
         int fromLeft = rectCenter[1] - (int) Math.floor(DRAW_HEAT_SOURCE_RECTANGLE_SIZE / 2);
         int y;
@@ -314,6 +373,7 @@ public class PicToColorScale implements Callable<DIPreturn>
           checkImageDraw(width, height, bufferedImage, y, x);
         }
       }
+      // get new filename (for png)
       String filename = file.getPath().substring(0, file.getPath().length() - 5);
       File outputFile = new File(
           filename + "_Output_min" + min + "_max" + max + "_clusters" + CLUSTER_COLORS_COUNT + ".png");
@@ -321,10 +381,12 @@ public class PicToColorScale implements Callable<DIPreturn>
       if (outputFile.exists())
       { outputFile.delete(); }
       Thread.sleep(100);
+      // create new image
       ImageIO.write(bufferedImage, "png", outputFile.getAbsoluteFile());
       // get thermal value distribution as csv file
       if (!CLUSTER_COLORS)
       {
+        // one row for values, one row for counts
         Iterator<Entry<Integer, Integer>> iterator  = valueFrequencies.entrySet().iterator();
         StringBuilder                     header    = new StringBuilder();
         StringBuilder                     frequency = new StringBuilder();
@@ -341,6 +403,7 @@ public class PicToColorScale implements Callable<DIPreturn>
       }
       if (WRITE_JPG)
       {
+        //write jpg?
         ImageIO.write(bufferedImage,
                       "jpg",
                       new File(
@@ -382,14 +445,25 @@ public class PicToColorScale implements Callable<DIPreturn>
     }
   }
   
+  /**
+   * Measure time taken and print statistics about this image to system out
+   *
+   * @return
+   */
   @Override
   public DIPreturn call()
   {
+    // start time measurement
     final long startTime = System.currentTimeMillis();
-    DIPreturn  dipreturn = this.picuteToColorScale(this.file);
-    final long endTime   = System.currentTimeMillis();
-    final long elapsed   = endTime - startTime;
+    // do some work
+    DIPreturn dipreturn = this.picuteToColorScale(this.file);
+    // end time measurement
+    final long endTime = System.currentTimeMillis();
+    // calculate time elapsed
+    final long elapsed = endTime - startTime;
+    // store it in return object
     dipreturn.elapsedTotal((double) elapsed / 1000);
+    // print image stats
     System.out.println(
         "DIP for (" + this.file.getParentFile().getName() + ")" + this.file.getName() + " took " +
         dipreturn.elapsedTotal() +
@@ -398,6 +472,7 @@ public class PicToColorScale implements Callable<DIPreturn>
         dipreturn.elapsedClustering() + " seconds)| Min: " + dipreturn.min() + " Max: " + dipreturn.max() +
         " | Heat source found / confirmed: " + dipreturn.heatRegionFound() + " (" + dipreturn.countHotPixels() + ") |" +
         " Clusters: " + (CLUSTER_COLORS ? CLUSTER_COLORS_COUNT : "off"));
+    // return it.
     return dipreturn;
   }
 }
